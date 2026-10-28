@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    send_batch_size: 10
+
+exporters:
+  otlphttp/wazuh:
+    endpoint: "http://wazuh:1514/logs"
+    tls:
+      insecure: true
+  otlphttp/hash_engine:
+    traces_endpoint: "http://hash-engine:8000/preserve"
+    tls:
+      insecure: true
+    encoding: json
+    compression: none
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/wazuh, otlphttp/hash_engine]

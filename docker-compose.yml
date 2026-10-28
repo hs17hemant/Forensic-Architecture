@@ -1,0 +1,59 @@
+services:
+  app:
+    build: ./app
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"
+
+  hash-engine:
+    build: ./hash-engine
+    environment:
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=password123
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./wazuh_alerts.json:/var/ossec/logs/alerts/alerts.json
+      - ./hash-engine/engine.py:/app/engine.py
+
+  wazuh:
+    image: wazuh/wazuh-manager:4.7.0
+    ports:
+      - "1514:1514"
+      - "55000:55000"
+    volumes:
+      - ./wazuh_alerts.json:/var/ossec/logs/alerts/alerts.json
+
+  minio:
+    image: coollabsio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=password123
+    volumes:
+      - ./dashboard/ui.py:/app/ui.py
+      - ./wazuh_alerts.json:/var/ossec/logs/alerts/alerts.json
+
+
